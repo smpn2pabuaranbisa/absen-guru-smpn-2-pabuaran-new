@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Bell, Search, Activity, Sparkles, Plus, Camera, X, Navigation,
   GraduationCap, ChevronDown, FileText, Coffee, Image as ImageIcon,
   Lock, Shield, QrCode, Users, Check, Trash2, Edit, AlertCircle, XCircle, Upload, Calendar, Download, FileSpreadsheet, Settings, Building, Hash, FolderDown, RefreshCw,
-  Eye, EyeOff
+  Eye, EyeOff, ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import jsPDF from 'jspdf';
@@ -51,7 +51,8 @@ import {
   initialSyncWithGoogleSheets,
   uploadAllLocalDataToGoogleSheets,
   isSameDay,
-  normalizeDateToYYYYMMDD
+  normalizeDateToYYYYMMDD,
+  formatGoogleDriveUrl
 } from './lib/sheetsSync';
 
 type AttendanceRecord = {
@@ -7843,34 +7844,10 @@ export default function App() {
         )}
 
         {selectedPhotoUrl && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#05050A]/95 backdrop-blur-md p-4"
-            onClick={() => setSelectedPhotoUrl(null)}
-          >
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="relative max-w-md w-full bg-[#0D0D15] border border-white/10 rounded-3xl p-3 overflow-hidden shadow-2xl" 
-              onClick={e => e.stopPropagation()}
-            >
-              <button 
-                className="absolute top-4 right-4 p-2 bg-white/5 hover:bg-white/10 text-white rounded-full transition-colors z-10 cursor-pointer"
-                onClick={() => setSelectedPhotoUrl(null)}
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <div className="aspect-[3/4] rounded-2xl overflow-hidden border border-white/5 bg-black">
-                <img src={selectedPhotoUrl} alt="Selfie Absensi Guru" className="w-full h-full object-cover" />
-              </div>
-              <div className="mt-3 text-center text-xs text-gray-400 font-normal">
-                Foto Selfie Kehadiran Guru
-              </div>
-            </motion.div>
-          </motion.div>
+          <PhotoPreviewModal 
+            photoUrl={selectedPhotoUrl} 
+            onClose={() => setSelectedPhotoUrl(null)} 
+          />
         )}
       </AnimatePresence>
 
@@ -7880,6 +7857,117 @@ export default function App() {
         }
       `}</style>
     </div>
+  );
+}
+
+function PhotoPreviewModal({ 
+  photoUrl, 
+  onClose 
+}: { 
+  photoUrl: string; 
+  onClose: () => void; 
+}) {
+  const formattedUrl = formatGoogleDriveUrl(photoUrl);
+  const [imgLoading, setImgLoading] = useState(true);
+  const [imgError, setImgError] = useState(false);
+
+  const isErrorText = photoUrl.startsWith('Error') || photoUrl.startsWith('Error upload');
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#05050A]/95 backdrop-blur-md p-4"
+      onClick={onClose}
+    >
+      <motion.div 
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="relative max-w-md w-full bg-[#0D0D15] border border-white/10 rounded-3xl p-4 overflow-hidden shadow-2xl flex flex-col items-center" 
+        onClick={e => e.stopPropagation()}
+      >
+        <button 
+          className="absolute top-4 right-4 p-2 bg-white/5 hover:bg-white/10 text-white rounded-full transition-colors z-20 cursor-pointer"
+          onClick={onClose}
+          title="Tutup Modal"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="w-full text-center mb-3 pr-8">
+          <h4 className="text-sm font-normal text-white flex items-center justify-center gap-2">
+            <Camera className="w-4 h-4 text-blue-400" />
+            Foto Selfie Kehadiran Guru
+          </h4>
+        </div>
+
+        <div className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 bg-[#08080E] flex items-center justify-center">
+          {isErrorText || imgError ? (
+            <div className="p-6 text-center flex flex-col items-center justify-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm font-normal text-white">Foto Tidak Dapat Dimuat Langsung</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {isErrorText ? photoUrl : 'Browser atau Google Drive membatasi akses gambar langsung. Silakan buka tautan foto.'}
+                </p>
+              </div>
+              {(formattedUrl || photoUrl) && (formattedUrl.startsWith('http') || photoUrl.startsWith('http')) && (
+                <a
+                  href={formattedUrl || photoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30 rounded-xl text-xs flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" /> Buka Foto di Google Drive
+                </a>
+              )}
+            </div>
+          ) : (
+            <>
+              {imgLoading && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#08080E] z-10 gap-2 text-gray-400 text-xs">
+                  <RefreshCw className="w-6 h-6 animate-spin text-blue-400" />
+                  <span>Memuat Foto...</span>
+                </div>
+              )}
+              <img 
+                src={formattedUrl || photoUrl} 
+                alt="Selfie Absensi Guru" 
+                referrerPolicy="no-referrer"
+                onLoad={() => setImgLoading(false)}
+                onError={() => {
+                  setImgError(true);
+                  setImgLoading(false);
+                }}
+                className={`w-full h-full object-cover transition-opacity duration-300 ${imgLoading ? 'opacity-0' : 'opacity-100'}`} 
+              />
+            </>
+          )}
+        </div>
+
+        {/* Footer info & direct view button */}
+        <div className="mt-3 w-full flex items-center justify-between gap-2 pt-2 border-t border-white/5">
+          <span className="text-[11px] text-gray-500 truncate">
+            {photoUrl.startsWith('data:image') ? 'Format: Base64' : 'Format: Google Drive'}
+          </span>
+
+          {(formattedUrl.startsWith('http') || photoUrl.startsWith('http')) && (
+            <a
+              href={formattedUrl || photoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 hover:underline transition-all"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Buka Ukuran Penuh
+            </a>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -8058,9 +8146,9 @@ function uploadBase64ToDrive(base64Data, fileName, folderName) {
     // Set file permission so anyone with the link can view it (important for direct rendering on client)
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     
-    // Generate a web-friendly direct link that can be rendered directly by browser img tags
+    // Generate a web-friendly direct CDN link that can be rendered directly by browser img tags
     const fileId = file.getId();
-    const directUrl = "https://drive.google.com/uc?export=download&id=" + fileId;
+    const directUrl = "https://lh3.googleusercontent.com/d/" + fileId;
     return directUrl;
   } catch (err) {
     return 'Error upload: ' + err.toString();

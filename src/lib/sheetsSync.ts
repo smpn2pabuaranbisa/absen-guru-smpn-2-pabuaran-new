@@ -390,6 +390,29 @@ export function isSameDay(dateStr1: any, dateStr2OrDateObj?: any): boolean {
   return norm1 === targetYYYYMMDD;
 }
 
+export function formatGoogleDriveUrl(url: any): string {
+  if (!url || typeof url !== 'string') return '';
+  const str = url.trim();
+  if (!str) return '';
+
+  if (str.startsWith('data:image/')) {
+    return str;
+  }
+
+  if (str.startsWith('Error upload') || str.startsWith('Error:')) {
+    return str;
+  }
+
+  // Extract file ID from Google Drive URL patterns or raw ID
+  const driveMatch = str.match(/(?:id=|file\/d\/|lh3\.googleusercontent\.com\/d\/)([a-zA-Z0-9_-]{15,})/);
+  if (driveMatch && driveMatch[1]) {
+    const fileId = driveMatch[1];
+    return `https://lh3.googleusercontent.com/d/${fileId}`;
+  }
+
+  return str;
+}
+
 // Konversi Item dari Google Sheets (Header Indonesia) Kembali ke Object Internal Aplikasi
 export function fromIndonesianRecord(colName: string, item: any): any {
   if (!item || typeof item !== 'object') return item;
@@ -429,7 +452,8 @@ export function fromIndonesianRecord(colName: string, item: any): any {
         guru: item.guru || ''
       };
     case 'teachingSessions': {
-      const imgUrl = item.linkFoto || item.photoLink || item.photo || item.foto_url || item.foto || null;
+      const rawImg = item.linkFoto || item.photoLink || item.photoDriveLink || item.photo || item.foto_url || item.foto || item.link_foto_mengajar || item.foto_base64 || null;
+      const imgUrl = formatGoogleDriveUrl(rawImg);
       return {
         id: String(item.id || ''),
         name: item.nama || item.name || '',
@@ -448,7 +472,8 @@ export function fromIndonesianRecord(colName: string, item: any): any {
       };
     }
     case 'izinRequests': {
-      const attUrl = item.linkLampiran || item.attachmentDriveLink || item.attachment || item.lampiran || null;
+      const rawAtt = item.linkLampiran || item.attachmentDriveLink || item.attachment || item.lampiran || item.link_lampiran_drive || item.lampiran_base64 || null;
+      const attUrl = formatGoogleDriveUrl(rawAtt);
       return {
         id: String(item.id || ''),
         name: item.nama || item.name || '',
@@ -473,7 +498,8 @@ export function fromIndonesianRecord(colName: string, item: any): any {
         teacherNip: cleanNipOrNis(item.nipGuru || item.teacherNip)
       };
     case 'attendanceRecords': {
-      const pUrl = item.linkFoto || item.photoLink || item.photo || item.foto_url || item.foto || null;
+      const rawUrl = item.linkFoto || item.photoLink || item.photoDriveLink || item.photo || item.foto_url || item.foto || item.link_foto_drive || item.foto_base64 || null;
+      const pUrl = formatGoogleDriveUrl(rawUrl);
       return {
         id: String(item.id || ''),
         type: item.tipe || item.type || '',
