@@ -552,13 +552,13 @@ function safeSyncCollection(key: string, rawCloudItems: any[]): void {
  * Mengambil seluruh koleksi data sekaligus dalam satu request (SANGAT CEPAT!)
  * lalu memperbarui cache lokal localStorage agar performa aplikasi sangat mulus.
  */
-export async function initialSyncWithGoogleSheets(): Promise<boolean> {
+export async function initialSyncWithGoogleSheets(force: boolean = false): Promise<boolean> {
   const url = getAppsScriptUrl();
   if (!url) {
     console.log('Google Sheets URL tidak dikonfigurasi. Berjalan dalam mode Local Cache.');
     return false;
   }
-  if (isInitialSyncDone) return true;
+  if (isInitialSyncDone && !force) return true;
   
   try {
     console.log('Memulai sinkronisasi awal penuh dengan Google Sheets...');
