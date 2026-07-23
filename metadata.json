@@ -1,0 +1,11 @@
+{
+  "name": "Absensi Digital SMPN 2 Pabuaran",
+  "description": "Aplikasi Absensi Guru dengan pencatatan waktu nyata",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

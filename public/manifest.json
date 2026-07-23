@@ -1,0 +1,31 @@
+{
+  "short_name": "Absensi",
+  "name": "Absensi Guru & Siswa",
+  "description": "Sistem Absensi Terintegrasi Guru, Staff, dan Siswa untuk SMPN 2 Pabuaran",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#05050A",
+  "theme_color": "#3b82f6",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "categories": ["education", "productivity"]
+}

@@ -1,0 +1,179 @@
+{
+  "entities": {
+    "Teacher": {
+      "title": "Teacher",
+      "description": "Guru dan staff metadata",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "nip": { "type": "string" },
+        "role": { "type": "string" },
+        "mapel": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["name", "nip", "role", "mapel", "status"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "Siswa metadata",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "nis": { "type": "string" },
+        "kelas": { "type": "string" },
+        "barcode": { "type": "string" }
+      },
+      "required": ["name", "nis", "kelas", "barcode"]
+    },
+    "StudentRecord": {
+      "title": "StudentRecord",
+      "description": "Pencatatan presensi siswa melalui scan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nis": { "type": "string" },
+        "kelas": { "type": "string" },
+        "time": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "name", "nis", "kelas", "time", "status"]
+    },
+    "TeachingSession": {
+      "title": "TeachingSession",
+      "description": "Sesi mengajar guru pada hari ini",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nip": { "type": "string" },
+        "mapel": { "type": "string" },
+        "kelas": { "type": "string" },
+        "jam": { "type": "string" },
+        "status": { "type": "string" },
+        "timeStarted": { "type": "string" },
+        "timeEnded": { "type": "string" }
+      },
+      "required": ["id", "name", "nip", "mapel", "kelas", "jam", "status", "timeStarted", "timeEnded"]
+    },
+    "IzinRequest": {
+      "title": "IzinRequest",
+      "description": "Permohonan izin atau sakit guru/staff",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nip": { "type": "string" },
+        "tipe": { "type": "string" },
+        "tanggalMulai": { "type": "string" },
+        "tanggalSelesai": { "type": "string" },
+        "alasan": { "type": "string" },
+        "status": { "type": "string" },
+        "attachment": { "type": "string" }
+      },
+      "required": ["id", "name", "nip", "tipe", "tanggalMulai", "tanggalSelesai", "alasan", "status"]
+    },
+    "TeachingSchedule": {
+      "title": "TeachingSchedule",
+      "description": "Jadwal mengajar mingguan guru",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "day": { "type": "string" },
+        "time": { "type": "string" },
+        "class": { "type": "string" },
+        "subject": { "type": "string" }
+      },
+      "required": ["id", "day", "time", "class", "subject"]
+    },
+    "PiketSchedule": {
+      "title": "PiketSchedule",
+      "description": "Jadwal harian guru piket",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "day": { "type": "string" },
+        "teacherNips": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["id", "day", "teacherNips"]
+    },
+    "ClassSubstitution": {
+      "title": "ClassSubstitution",
+      "description": "Pencatatan substitusi guru kelas yang berhalangan hadir",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "class": { "type": "string" },
+        "subject": { "type": "string" },
+        "hours": { "type": "string" },
+        "absentTeacherNip": { "type": "string" },
+        "absentTeacherName": { "type": "string" },
+        "substituteTeacherNip": { "type": "string" },
+        "substituteTeacherName": { "type": "string" },
+        "taskDescription": { "type": "string" },
+        "status": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "date", "class", "subject", "hours", "absentTeacherNip", "absentTeacherName", "substituteTeacherNip", "substituteTeacherName", "status"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Pencatatan presensi guru/staff",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "color": { "type": "string" },
+        "bg": { "type": "string" },
+        "glow": { "type": "string" },
+        "iconName": { "type": "string" }
+      },
+      "required": ["id", "type", "date", "time", "color", "bg", "glow", "iconName"]
+    }
+  },
+  "firestore": {
+    "teachers": {
+      "schema": { "$ref": "#/entities/Teacher" },
+      "description": "Koleksi data guru dan staff"
+    },
+    "students": {
+      "schema": { "$ref": "#/entities/Student" },
+      "description": "Koleksi data siswa"
+    },
+    "studentRecords": {
+      "schema": { "$ref": "#/entities/StudentRecord" },
+      "description": "Koleksi riwayat presensi/absen siswa"
+    },
+    "teachingSessions": {
+      "schema": { "$ref": "#/entities/TeachingSession" },
+      "description": "Koleksi sesi mengajar aktif"
+    },
+    "izinRequests": {
+      "schema": { "$ref": "#/entities/IzinRequest" },
+      "description": "Koleksi permohonan izin/sakit guru dan staff"
+    },
+    "teachingSchedule": {
+      "schema": { "$ref": "#/entities/TeachingSchedule" },
+      "description": "Koleksi jadwal mengajar"
+    },
+    "piketSchedule": {
+      "schema": { "$ref": "#/entities/PiketSchedule" },
+      "description": "Koleksi jadwal harian guru piket"
+    },
+    "classSubstitutions": {
+      "schema": { "$ref": "#/entities/ClassSubstitution" },
+      "description": "Koleksi pencatatan substitusi guru kelas yang berhalangan hadir"
+    },
+    "attendanceRecords": {
+      "schema": { "$ref": "#/entities/AttendanceRecord" },
+      "description": "Koleksi presensi harian guru dan staff"
+    }
+  }
+}

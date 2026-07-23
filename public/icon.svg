@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="50%" stop-color="#05050A" />
+      <stop offset="100%" stop-color="#1E1B4B" />
+    </linearGradient>
+    
+    <!-- Glowing Blue/Purple Gradient for Emblem -->
+    <linearGradient id="glow-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6" />
+      <stop offset="50%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#8B5CF6" />
+    </linearGradient>
+
+    <!-- Scanner Laser Gradient -->
+    <linearGradient id="laser-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06B6D4" stop-opacity="0" />
+      <stop offset="15%" stop-color="#06B6D4" stop-opacity="0.2" />
+      <stop offset="50%" stop-color="#22D3EE" stop-opacity="1" />
+      <stop offset="85%" stop-color="#06B6D4" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Ring Glow Filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Base App Background (Squircle) -->
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#bg-grad)" stroke="rgba(255,255,255,0.08)" stroke-width="6" />
+
+  <!-- Outer Ring with Glow -->
+  <circle cx="256" cy="256" r="170" fill="none" stroke="url(#glow-grad)" stroke-width="4" stroke-dasharray="10 6" opacity="0.6" />
+  
+  <g filter="url(#glow)">
+    <!-- Shield/Graduation Badge shape -->
+    <path d="M256,110 L370,165 L370,275 C370,345 320,392 256,415 C192,392 142,345 142,275 L142,165 Z" 
+          fill="none" 
+          stroke="url(#glow-grad)" 
+          stroke-width="12" 
+          stroke-linejoin="round" />
+  </g>
+
+  <!-- Scanning Line / Laser across the shield -->
+  <rect x="100" y="240" width="312" height="6" fill="url(#laser-grad)" filter="url(#glow)" />
+  <rect x="100" y="242" width="312" height="2" fill="#FFFFFF" />
+
+  <!-- Center Icons: Graduation Cap + Scanning Box Target Corners -->
+  <g transform="translate(216, 212) scale(1.6)">
+    <!-- Graduation Cap Icon in White -->
+    <path d="M25 3 L3 12 L25 21 L43 13.8 M43 13.8 L43 25.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    <path d="M11 15.5 L11 28 C11 31.5 17.5 33 25 33 C32.5 33 39 31.5 39 28 L39 15.5" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    <path d="M25 3 L25 12" stroke="url(#glow-grad)" stroke-width="1.5" stroke-linecap="round" />
+  </g>
+
+  <!-- Scanning Corners -->
+  <g stroke="#22D3EE" stroke-width="6" fill="none" stroke-linecap="round">
+    <!-- Top Left -->
+    <path d="M170 195 L170 175 L190 175" />
+    <!-- Top Right -->
+    <path d="M342 195 L342 175 L322 175" />
+    <!-- Bottom Left -->
+    <path d="M170 317 L170 337 L190 337" />
+    <!-- Bottom Right -->
+    <path d="M342 317 L342 337 L322 337" />
+  </g>
+  
+  <!-- Subtle Grid Dots in background -->
+  <circle cx="120" cy="120" r="3" fill="#3B82F6" opacity="0.3" />
+  <circle cx="392" cy="120" r="3" fill="#3B82F6" opacity="0.3" />
+  <circle cx="120" cy="392" r="3" fill="#3B82F6" opacity="0.3" />
+  <circle cx="392" cy="392" r="3" fill="#3B82F6" opacity="0.3" />
+</svg>
