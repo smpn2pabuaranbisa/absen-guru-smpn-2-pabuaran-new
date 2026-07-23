@@ -311,6 +311,85 @@ export function toIndonesianRecord(colName: string, item: any): any {
   }
 }
 
+export function normalizeDateToYYYYMMDD(dStr: any): string {
+  if (!dStr) return '';
+  let str = String(dStr).trim();
+  if (!str) return '';
+
+  // Remove ISO / timestamp parts: "2026-07-23 00:00:00", "2026-07-23T00:00:00.000Z"
+  if (str.includes(' ') && /^\d{4}-\d{2}-\d{2}/.test(str)) {
+    str = str.split(' ')[0];
+  }
+  if (str.includes('T')) {
+    str = str.split('T')[0];
+  }
+
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    return str;
+  }
+
+  // DD/MM/YYYY or DD-MM-YYYY
+  if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(str)) {
+    const parts = str.split(/[\/-]/);
+    const day = parts[0].padStart(2, '0');
+    const month = parts[1].padStart(2, '0');
+    const year = parts[2];
+    return `${year}-${month}-${day}`;
+  }
+
+  // DD MMM YYYY (e.g. "23 Jul 2026", "23 Jul 2026.", "23 Juli 2026")
+  const parts = str.replace(/\./g, '').split(/\s+/);
+  if (parts.length >= 3) {
+    const day = parts[0].padStart(2, '0');
+    const monthMap: Record<string, string> = {
+      jan: '01', januari: '01',
+      feb: '02', februari: '02',
+      mar: '03', maret: '03',
+      apr: '04', april: '04',
+      mei: '05', may: '05',
+      jun: '06', juni: '06',
+      jul: '07', juli: '07',
+      agu: '08', agustus: '08', aug: '08',
+      sep: '09', september: '09',
+      okt: '10', oktober: '10', oct: '10',
+      nov: '11', november: '11',
+      des: '12', desember: '12', dec: '12'
+    };
+    const mStr = parts[1].toLowerCase();
+    const month = monthMap[mStr] || '01';
+    const year = parts[2];
+    if (/^\d{4}$/.test(year)) {
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  return str;
+}
+
+export function isSameDay(dateStr1: any, dateStr2OrDateObj?: any): boolean {
+  if (!dateStr1) return false;
+  
+  let targetYYYYMMDD = '';
+  if (!dateStr2OrDateObj) {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    targetYYYYMMDD = `${y}-${m}-${d}`;
+  } else if (dateStr2OrDateObj instanceof Date) {
+    const y = dateStr2OrDateObj.getFullYear();
+    const m = String(dateStr2OrDateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateStr2OrDateObj.getDate()).padStart(2, '0');
+    targetYYYYMMDD = `${y}-${m}-${d}`;
+  } else {
+    targetYYYYMMDD = normalizeDateToYYYYMMDD(dateStr2OrDateObj);
+  }
+
+  const norm1 = normalizeDateToYYYYMMDD(dateStr1);
+  return norm1 === targetYYYYMMDD;
+}
+
 // Konversi Item dari Google Sheets (Header Indonesia) Kembali ke Object Internal Aplikasi
 export function fromIndonesianRecord(colName: string, item: any): any {
   if (!item || typeof item !== 'object') return item;
@@ -320,6 +399,7 @@ export function fromIndonesianRecord(colName: string, item: any): any {
       return {
         nip: cleanNipOrNis(item.nip),
         name: item.nama || item.name || '',
+        nama: item.nama || item.name || '',
         role: item.peran || item.role || 'guru',
         mapel: item.mapel || '',
         status: item.status || 'Aktif',
@@ -330,6 +410,7 @@ export function fromIndonesianRecord(colName: string, item: any): any {
       return {
         nis: cleanNipOrNis(item.nis),
         name: item.nama || item.name || '',
+        nama: item.nama || item.name || '',
         kelas: item.kelas || '',
         barcode: cleanNipOrNis(item.barcode || item.nis)
       };
@@ -337,6 +418,7 @@ export function fromIndonesianRecord(colName: string, item: any): any {
       return {
         id: String(item.id || ''),
         name: item.nama || item.name || '',
+        nama: item.nama || item.name || '',
         nis: cleanNipOrNis(item.nis),
         kelas: item.kelas || '',
         time: cleanTimeString(item.waktu || item.time || ''),
@@ -346,10 +428,12 @@ export function fromIndonesianRecord(colName: string, item: any): any {
         mapel: item.mapel || '',
         guru: item.guru || ''
       };
-    case 'teachingSessions':
+    case 'teachingSessions': {
+      const imgUrl = item.linkFoto || item.photoLink || item.photo || item.foto_url || item.foto || null;
       return {
         id: String(item.id || ''),
         name: item.nama || item.name || '',
+        nama: item.nama || item.name || '',
         nip: cleanNipOrNis(item.nip),
         mapel: item.mapel || '',
         kelas: item.kelas || '',
@@ -357,23 +441,28 @@ export function fromIndonesianRecord(colName: string, item: any): any {
         status: item.status || '',
         timeStarted: item.waktuMulai || item.timeStarted || '',
         timeEnded: item.waktuSelesai || item.timeEnded || '',
-        photoLink: item.linkFoto || item.photoLink || item.photo || null,
-        photo: item.linkFoto || item.photoLink || item.photo || null,
+        photoLink: imgUrl,
+        photoDriveLink: imgUrl,
+        photo: imgUrl,
         date: item.tanggal || item.date || ''
       };
-    case 'izinRequests':
+    }
+    case 'izinRequests': {
+      const attUrl = item.linkLampiran || item.attachmentDriveLink || item.attachment || item.lampiran || null;
       return {
         id: String(item.id || ''),
         name: item.nama || item.name || '',
+        nama: item.nama || item.name || '',
         nip: cleanNipOrNis(item.nip),
         tipe: item.tipe || '',
         tanggalMulai: item.tanggalMulai || '',
         tanggalSelesai: item.tanggalSelesai || '',
         alasan: item.alasan || '',
         status: item.status || 'Menunggu',
-        attachmentDriveLink: item.linkLampiran || item.attachmentDriveLink || item.attachment || null,
-        attachment: item.linkLampiran || item.attachmentDriveLink || item.attachment || null
+        attachmentDriveLink: attUrl,
+        attachment: attUrl
       };
+    }
     case 'teachingSchedule':
       return {
         id: String(item.id || ''),
@@ -383,7 +472,8 @@ export function fromIndonesianRecord(colName: string, item: any): any {
         subject: item.mapel || item.subject || '',
         teacherNip: cleanNipOrNis(item.nipGuru || item.teacherNip)
       };
-    case 'attendanceRecords':
+    case 'attendanceRecords': {
+      const pUrl = item.linkFoto || item.photoLink || item.photo || item.foto_url || item.foto || null;
       return {
         id: String(item.id || ''),
         type: item.tipe || item.type || '',
@@ -391,10 +481,13 @@ export function fromIndonesianRecord(colName: string, item: any): any {
         time: cleanTimeString(item.waktu || item.time || ''),
         nip: cleanNipOrNis(item.nip),
         nama: item.nama || item.name || '',
-        photoLink: item.linkFoto || item.photoLink || item.photo || null,
-        photo: item.linkFoto || item.photoLink || item.photo || null,
+        name: item.nama || item.name || '',
+        photoLink: pUrl,
+        photoDriveLink: pUrl,
+        photo: pUrl,
         distance: typeof item.jarak === 'number' ? item.jarak : (typeof item.distance === 'number' ? item.distance : parseFloat(item.jarak || item.distance || '0'))
       };
+    }
     case 'holidays':
       return {
         id: String(item.id || ''),

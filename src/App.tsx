@@ -5,7 +5,7 @@ import {
   CheckCircle2, Clock, User, Mail, Phone, MapPin, 
   LayoutDashboard, Bell, Search, Activity, Sparkles, Plus, Camera, X, Navigation,
   GraduationCap, ChevronDown, FileText, Coffee, Image as ImageIcon,
-  Lock, Shield, QrCode, Users, Check, Trash2, Edit, AlertCircle, XCircle, Upload, Calendar, Download, FileSpreadsheet, Settings, Building, Hash, FolderDown,
+  Lock, Shield, QrCode, Users, Check, Trash2, Edit, AlertCircle, XCircle, Upload, Calendar, Download, FileSpreadsheet, Settings, Building, Hash, FolderDown, RefreshCw,
   Eye, EyeOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -49,7 +49,9 @@ import {
   saveClassSubstitutionSync,
   deleteClassSubstitutionSync,
   initialSyncWithGoogleSheets,
-  uploadAllLocalDataToGoogleSheets
+  uploadAllLocalDataToGoogleSheets,
+  isSameDay,
+  normalizeDateToYYYYMMDD
 } from './lib/sheetsSync';
 
 type AttendanceRecord = {
@@ -615,10 +617,8 @@ export default function App() {
   }, [filteredTeacherAttendanceHistory]);
 
   const activeTeachersCount = useMemo(() => {
-    const todayStrID = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-    const todayStrEN = new Date().toLocaleDateString('en-CA');
     const todayRecords = records.filter(r => 
-      (r.date === todayStrID || r.date === todayStrEN) && 
+      isSameDay(r.date) && 
       (r.type === 'Absen Datang' || r.type === 'Absen Pulang')
     );
     const uniqueNips = new Set(todayRecords.map(r => r.nip).filter(Boolean));
@@ -626,22 +626,17 @@ export default function App() {
   }, [records]);
 
   const todayTeacherRecords = useMemo(() => {
-    const todayStrID = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-    const todayStrEN = new Date().toLocaleDateString('en-CA');
     return records.filter(r => 
-      (r.date === todayStrID || r.date === todayStrEN) && 
+      isSameDay(r.date) && 
       (r.type === 'Absen Datang' || r.type === 'Absen Pulang')
     );
   }, [records]);
 
   const mappedTeachersToday = useMemo(() => {
-    const todayStrID = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-    const todayStrEN = new Date().toLocaleDateString('en-CA');
-    
     return teachers.map(teacher => {
       const teacherRecords = records.filter(r => 
         r.nip === teacher.nip && 
-        (r.date === todayStrID || r.date === todayStrEN)
+        isSameDay(r.date)
       );
       
       const datangRec = teacherRecords.find(r => r.type === 'Absen Datang');
@@ -752,10 +747,8 @@ export default function App() {
   }, [mappedTeachersToday, teacherSearchQuery, teacherStatusFilter]);
 
   const filteredTeachingSessionsToday = useMemo(() => {
-    const todayStrID = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-    const todayStrEN = new Date().toLocaleDateString('en-CA');
     return teachingSessionsToday.filter(session => 
-      session.date === todayStrID || session.date === todayStrEN
+      isSameDay(session.date)
     );
   }, [teachingSessionsToday]);
 
@@ -1056,66 +1049,68 @@ export default function App() {
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [editingProfileData, setEditingProfileData] = useState<any>(null);
 
-  // Load initial data from Firebase on mount
-  useEffect(() => {
-    async function loadFirebaseData() {
-      setIsLoading(true);
-      try {
-        // Lakukan sinkronisasi penuh dengan Google Sheets terlebih dahulu jika URL diatur
-        await initialSyncWithGoogleSheets();
+  // Load initial data from Firebase/Google Sheets on mount
+  const handleManualSyncData = async () => {
+    setIsLoading(true);
+    try {
+      showNotification('Menghubungi Google Sheets untuk memperbarui data...', 'text-blue-400');
+      await initialSyncWithGoogleSheets(true);
 
-        const loadedTeachers = await getTeachersSync(teachers);
-        setTeachers(loadedTeachers);
+      const loadedTeachers = await getTeachersSync(teachers);
+      setTeachers(loadedTeachers || []);
 
-        const loadedStudents = await getStudentsSync(students);
-        setStudents(loadedStudents);
+      const loadedStudents = await getStudentsSync(students);
+      setStudents(loadedStudents || []);
 
-        const loadedStudentRecords = await getStudentRecordsSync(studentRecords);
-        setStudentRecords(loadedStudentRecords);
+      const loadedStudentRecords = await getStudentRecordsSync(studentRecords);
+      setStudentRecords(loadedStudentRecords || []);
 
-        const loadedSessions = await getTeachingSessionsSync(teachingSessionsToday);
-        setTeachingSessionsToday(loadedSessions);
+      const loadedSessions = await getTeachingSessionsSync(teachingSessionsToday);
+      setTeachingSessionsToday(loadedSessions || []);
 
-        const loadedIzinRequests = await getIzinRequestsSync(izinRequests);
-        setIzinRequests(loadedIzinRequests);
+      const loadedIzinRequests = await getIzinRequestsSync(izinRequests);
+      setIzinRequests(loadedIzinRequests || []);
 
-        const loadedSchedule = await getTeachingScheduleSync(teachingSchedule);
-        setTeachingSchedule(loadedSchedule);
+      const loadedSchedule = await getTeachingScheduleSync(teachingSchedule);
+      setTeachingSchedule(loadedSchedule || []);
 
-        const loadedRecords = await getAttendanceRecordsSync();
-        if (loadedRecords && loadedRecords.length > 0) {
-          setRecords(loadedRecords);
-        }
+      const loadedRecords = await getAttendanceRecordsSync();
+      setRecords(loadedRecords || []);
 
-        const loadedHolidays = await getHolidaysSync();
-        if (loadedHolidays) {
-          setHolidays(loadedHolidays);
-        }
-
-        const loadedPiketSchedule = await getPiketScheduleSync([
-          { id: 'Senin', day: 'Senin', teacherNips: [] },
-          { id: 'Selasa', day: 'Selasa', teacherNips: [] },
-          { id: 'Rabu', day: 'Rabu', teacherNips: [] },
-          { id: 'Kamis', day: 'Kamis', teacherNips: [] },
-          { id: 'Jumat', day: 'Jumat', teacherNips: [] },
-          { id: 'Sabtu', day: 'Sabtu', teacherNips: [] }
-        ]);
-        setPiketSchedule(loadedPiketSchedule);
-
-        const loadedSubstitutions = await getClassSubstitutionsSync();
-        setClassSubstitutions(loadedSubstitutions);
-
-        const loadedSettings = await getSystemSettingsSync(schoolSettings);
-        if (loadedSettings) {
-          setSchoolSettings(prev => ({ ...prev, ...loadedSettings }));
-        }
-      } catch (err) {
-        console.error("Failed to load Firebase data:", err);
-      } finally {
-        setIsLoading(false);
+      const loadedHolidays = await getHolidaysSync();
+      if (loadedHolidays) {
+        setHolidays(loadedHolidays);
       }
+
+      const loadedPiketSchedule = await getPiketScheduleSync([
+        { id: 'Senin', day: 'Senin', teacherNips: [] },
+        { id: 'Selasa', day: 'Selasa', teacherNips: [] },
+        { id: 'Rabu', day: 'Rabu', teacherNips: [] },
+        { id: 'Kamis', day: 'Kamis', teacherNips: [] },
+        { id: 'Jumat', day: 'Jumat', teacherNips: [] },
+        { id: 'Sabtu', day: 'Sabtu', teacherNips: [] }
+      ]);
+      setPiketSchedule(loadedPiketSchedule);
+
+      const loadedSubstitutions = await getClassSubstitutionsSync();
+      setClassSubstitutions(loadedSubstitutions || []);
+
+      const loadedSettings = await getSystemSettingsSync(schoolSettings);
+      if (loadedSettings) {
+        setSchoolSettings(prev => ({ ...prev, ...loadedSettings }));
+      }
+
+      showNotification('Sinkronisasi data Google Sheets berhasil!', 'text-emerald-400');
+    } catch (e) {
+      console.error('Error syncing:', e);
+      showNotification('Gagal memperbarui data dari Google Sheets', 'text-rose-400');
+    } finally {
+      setIsLoading(false);
     }
-    loadFirebaseData();
+  };
+
+  useEffect(() => {
+    handleManualSyncData();
   }, []);
 
   // Handlers for Guru Piket & Substitusi Kelas
@@ -1528,7 +1523,7 @@ export default function App() {
 
     if (btn.id === 'datang') {
       const hasCheckedInToday = records.some(
-        r => r.nip === nip && r.date === formattedDate && r.type === 'Absen Datang'
+        r => r.nip === nip && isSameDay(r.date) && r.type === 'Absen Datang'
       );
       if (hasCheckedInToday) {
         showNotification('Gagal: Anda sudah melakukan Absen Datang hari ini.', 'text-rose-400');
@@ -1538,7 +1533,7 @@ export default function App() {
 
     if (btn.id === 'pulang') {
       const hasCheckedInToday = records.some(
-        r => r.nip === nip && r.date === formattedDate && r.type === 'Absen Datang'
+        r => r.nip === nip && isSameDay(r.date) && r.type === 'Absen Datang'
       );
       if (!hasCheckedInToday) {
         showNotification('Gagal: Anda belum melakukan Absen Datang hari ini. Silakan lakukan Absen Datang terlebih dahulu.', 'text-rose-400');
@@ -1546,7 +1541,7 @@ export default function App() {
       }
 
       const hasCheckedOutToday = records.some(
-        r => r.nip === nip && r.date === formattedDate && r.type === 'Absen Pulang'
+        r => r.nip === nip && isSameDay(r.date) && r.type === 'Absen Pulang'
       );
       if (hasCheckedOutToday) {
         showNotification('Gagal: Anda sudah melakukan Absen Pulang hari ini.', 'text-rose-400');
@@ -2701,6 +2696,15 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleManualSyncData}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 transition-all cursor-pointer text-xs font-normal active:scale-95 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+              title="Sinkronkan Data Google Sheets"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Sinkronkan Data</span>
+            </button>
+
             <div className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full backdrop-blur-md">
               <Search className="w-4 h-4 text-gray-400" />
               <input type="text" placeholder="Search..." className="bg-transparent border-none outline-none text-sm w-32 text-gray-200 placeholder-gray-500" />
