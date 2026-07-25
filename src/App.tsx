@@ -1600,6 +1600,7 @@ export default function App() {
 
     if (btn.id === 'datang' || btn.id === 'pulang' || btn.id === 'mengajar' || btn.id === 'izin') {
       if (btn.id === 'mengajar') {
+        setJamSelesai('');
         if (!ruangKelas) {
           setRuangKelas('VII - A');
           localStorage.setItem('ruangKelas', 'VII - A');
@@ -1633,6 +1634,13 @@ export default function App() {
 
   const confirmAttendance = () => {
     if (modalState.type) {
+      if (modalState.type.id === 'mengajar') {
+        if (!jamSelesai || jamSelesai.trim() === '') {
+          showNotification('Gagal: Harap memilih Jam Selesai mengajar terlebih dahulu.', 'text-rose-400');
+          return;
+        }
+      }
+
       if (modalState.type.id === 'pulang') {
         const now = new Date();
         const schedule = getScheduleForDate(null, schoolSettings);
@@ -7456,7 +7464,7 @@ export default function App() {
                       <div className="space-y-1.5">
                         <div className="flex items-center gap-1.5 text-blue-400 font-normal tracking-wider text-[10px] uppercase">
                           <Clock className="w-3.5 h-3.5" />
-                          <span>JAM SELESAI</span>
+                          <span>JAM SELESAI <span className="text-rose-400">*</span></span>
                         </div>
                         <div className="relative">
                           <select 
@@ -7464,6 +7472,7 @@ export default function App() {
                             onChange={(e) => setJamSelesai(e.target.value)}
                             className="w-full bg-white/[0.03] border border-white/5 rounded-2xl pl-4 pr-10 py-3.5 text-xl font-normal text-white focus:outline-none focus:border-amber-500/50 appearance-none cursor-pointer"
                           >
+                            <option value="" className="bg-[#0a0a0f] text-gray-400 font-normal">-- Pilih Jam Selesai --</option>
                             {["07.30", "08.00", "08.30", "09.00", "09.30", "09.53", "10.00", "10.30", "11.00", "11.30", "12.00", "12.30", "13.00", "13.30", "14.00", "14.30", "15.00"].map((t) => (
                               <option key={t} value={t} className="bg-[#0a0a0f] text-white font-normal">{t}</option>
                             ))}
@@ -7574,11 +7583,16 @@ export default function App() {
                     {/* Bottom orange-yellow action button */}
                     <button
                       onClick={confirmAttendance}
-                      disabled={!photo}
+                      disabled={!photo || !jamSelesai}
                       className="w-full py-4 mt-2 rounded-[20px] bg-[#F59E0B] hover:bg-amber-500 text-black font-normal transition-all shadow-[0_4px_25px_rgba(245,158,11,0.3)] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed text-base active:scale-[0.98]"
                     >
                       Konfirmasi Sesi Mengajar
                     </button>
+                    {!jamSelesai && (
+                      <p className="text-[11px] text-amber-400/90 text-center mt-1">
+                        * Wajib memilih <span className="font-semibold underline">Jam Selesai</span> mengajar sebelum dapat mengonfirmasi.
+                      </p>
+                    )}
                   </>
                 ) : modalState.type.id === 'izin' ? (
                   /* =======================================================
