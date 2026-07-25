@@ -77,6 +77,63 @@ const attendanceButtons = [
   { id: 'izin', label: 'Izin / Sakit', icon: UserMinus, iconName: 'UserMinus', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/30', shadow: 'hover:shadow-[0_0_30px_rgba(251,191,36,0.3)]', glow: 'shadow-[0_0_15px_rgba(251,191,36,0.4)]' },
 ];
 
+// Helper function to check if a date string belongs to a selected month ("MM-YYYY" or "all")
+const isDateInMonth = (dateStr: string, monthYearStr: string): boolean => {
+  if (!dateStr) return false;
+  if (monthYearStr === 'all') return true;
+
+  const [mStr, yStr] = monthYearStr.split('-');
+  if (!mStr || !yStr) return false;
+
+  const targetMonth = parseInt(mStr, 10);
+  const targetYear = parseInt(yStr, 10);
+
+  const lowerDate = dateStr.toLowerCase().trim();
+
+  // Year check
+  if (!lowerDate.includes(yStr)) return false;
+
+  // Month text check (e.g. "25 Juli 2026" or "25 Jul 2026")
+  const monthsMap: Record<string, string[]> = {
+    '01': ['jan'], '02': ['feb'], '03': ['mar'], '04': ['apr'],
+    '05': ['mei', 'may'], '06': ['jun'], '07': ['jul'], '08': ['agu', 'aug', 'ags'],
+    '09': ['sep'], '10': ['okt', 'oct'], '11': ['nov'], '12': ['des', 'dec']
+  };
+  const abbrs = monthsMap[mStr] || [];
+  if (abbrs.some(abbr => lowerDate.includes(abbr))) {
+    return true;
+  }
+
+  // Numeric check: e.g. "25/07/2026", "2026-07-25", "25-07-2026", "25/7/2026"
+  const parts = lowerDate.split(/[/.-]/).map(p => p.trim());
+  if (parts.length >= 3) {
+    let year: number | null = null;
+    let month: number | null = null;
+
+    if (parts[0].length === 4) {
+      // YYYY-MM-DD or YYYY/MM/DD
+      year = parseInt(parts[0], 10);
+      month = parseInt(parts[1], 10);
+    } else if (parts[2].length === 4) {
+      // DD/MM/YYYY or MM/DD/YYYY
+      year = parseInt(parts[2], 10);
+      month = parseInt(parts[1], 10);
+    }
+
+    if (year === targetYear && month === targetMonth) {
+      return true;
+    }
+  }
+
+  // JS Date fallback
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) {
+    return d.getFullYear() === targetYear && (d.getMonth() + 1) === targetMonth;
+  }
+
+  return false;
+};
+
 // Helper function to calculate distance using Haversine formula
 function getDistanceFromLatLonInM(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371; // Radius of the earth in km
@@ -595,18 +652,7 @@ export default function App() {
   }, [records, nip, schoolSettings.entryLimit, schoolSettings.lateTolerance, schoolSettings.daySchedules]);
 
   const filteredTeacherAttendanceHistory = useMemo(() => {
-    return teacherAttendanceHistory.filter(h => {
-      if (personalHistoryMonth === 'all') return true;
-      const [m, y] = personalHistoryMonth.split('-');
-      const monthsMap: { [key: string]: string[] } = {
-        '01': ['Jan'], '02': ['Feb'], '03': ['Mar'], '04': ['Apr'],
-        '05': ['Mei', 'May'], '06': ['Jun'], '07': ['Jul'], '08': ['Agu', 'Aug'],
-        '09': ['Sep'], '10': ['Okt', 'Oct'], '11': ['Nov'], '12': ['Des', 'Dec']
-      };
-      const abbrs = monthsMap[m] || [];
-      const lowerDate = (h.date || '').toLowerCase();
-      return lowerDate.includes(y) && abbrs.some(abbr => lowerDate.includes(abbr.toLowerCase()));
-    });
+    return teacherAttendanceHistory.filter(h => isDateInMonth(h.date, personalHistoryMonth));
   }, [teacherAttendanceHistory, personalHistoryMonth]);
 
   const uniqueAttendanceDaysCount = useMemo(() => {
@@ -930,16 +976,7 @@ export default function App() {
     // Filter records by month
     const filteredRecords = monthYearStr === 'all' 
       ? records 
-      : records.filter(r => {
-        // Date format: DD MMM YYYY, we need to extract Month and Year
-        const [day, monthStr, year] = r.date.split(' ');
-        const monthMap: Record<string, string> = {
-          'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'Mei': '05', 'Jun': '06',
-          'Jul': '07', 'Ags': '08', 'Sep': '09', 'Okt': '10', 'Nov': '11', 'Des': '12'
-        };
-        const rMonthStr = `${monthMap[monthStr] || '01'}-${year}`;
-        return rMonthStr === monthYearStr;
-      });
+      : records.filter(r => isDateInMonth(r.date, monthYearStr));
 
     const recordsWithPhotos = filteredRecords.filter(r => r.photo);
 
@@ -1029,9 +1066,9 @@ export default function App() {
   const [newStudentName, setNewStudentName] = useState('');
   const [newStudentNis, setNewStudentNis] = useState('');
   const [newStudentKelas, setNewStudentKelas] = useState('');
-  const [exportTeacherMonth, setExportTeacherMonth] = useState('06-2026');
+  const [exportTeacherMonth, setExportTeacherMonth] = useState('07-2026');
   const [exportStudentClass, setExportStudentClass] = useState('all');
-  const [exportStudentMonth, setExportStudentMonth] = useState('06-2026');
+  const [exportStudentMonth, setExportStudentMonth] = useState('07-2026');
   const [showAddTeacherModal, setShowAddTeacherModal] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -6040,17 +6077,7 @@ export default function App() {
                               const tableData = teachers.map((teacher, idx) => {
                                 const teacherRecords = records.filter(r => {
                                   if (r.nip !== teacher.nip) return false;
-                                  if (exportTeacherMonth === 'all') return true;
-                                  
-                                  const [m, y] = exportTeacherMonth.split('-');
-                                  const monthsMap: { [key: string]: string[] } = {
-                                    '01': ['Jan'], '02': ['Feb'], '03': ['Mar'], '04': ['Apr'],
-                                    '05': ['Mei', 'May'], '06': ['Jun'], '07': ['Jul'], '08': ['Agu', 'Aug'],
-                                    '09': ['Sep'], '10': ['Okt', 'Oct'], '11': ['Nov'], '12': ['Des', 'Dec']
-                                  };
-                                  const abbrs = monthsMap[m] || [];
-                                  const lowerDate = (r.date || '').toLowerCase();
-                                  return lowerDate.includes(y) && abbrs.some(abbr => lowerDate.includes(abbr.toLowerCase()));
+                                  return isDateInMonth(r.date, exportTeacherMonth);
                                 });
 
                                 const totalDays = 20;
@@ -6098,17 +6125,7 @@ export default function App() {
                               const data = teachers.map((teacher, idx) => {
                                 const teacherRecords = records.filter(r => {
                                   if (r.nip !== teacher.nip) return false;
-                                  if (exportTeacherMonth === 'all') return true;
-                                  
-                                  const [m, y] = exportTeacherMonth.split('-');
-                                  const monthsMap: { [key: string]: string[] } = {
-                                    '01': ['Jan'], '02': ['Feb'], '03': ['Mar'], '04': ['Apr'],
-                                    '05': ['Mei', 'May'], '06': ['Jun'], '07': ['Jul'], '08': ['Agu', 'Aug'],
-                                    '09': ['Sep'], '10': ['Okt', 'Oct'], '11': ['Nov'], '12': ['Des', 'Dec']
-                                  };
-                                  const abbrs = monthsMap[m] || [];
-                                  const lowerDate = (r.date || '').toLowerCase();
-                                  return lowerDate.includes(y) && abbrs.some(abbr => lowerDate.includes(abbr.toLowerCase()));
+                                  return isDateInMonth(r.date, exportTeacherMonth);
                                 });
 
                                 const totalDays = 20;
@@ -6235,17 +6252,7 @@ export default function App() {
                               const tableData = filteredStudents.map((student, idx) => {
                                 const recs = studentRecords.filter(r => {
                                   if (r.nis !== student.nis) return false;
-                                  if (exportStudentMonth === 'all') return true;
-                                  
-                                  const [m, y] = exportStudentMonth.split('-');
-                                  const monthsMap: { [key: string]: string[] } = {
-                                    '01': ['Jan'], '02': ['Feb'], '03': ['Mar'], '04': ['Apr'],
-                                    '05': ['Mei', 'May'], '06': ['Jun'], '07': ['Jul'], '08': ['Agu', 'Aug'],
-                                    '09': ['Sep'], '10': ['Okt', 'Oct'], '11': ['Nov'], '12': ['Des', 'Dec']
-                                  };
-                                  const abbrs = monthsMap[m] || [];
-                                  const lowerDate = (r.date || '').toLowerCase();
-                                  return lowerDate.includes(y) && abbrs.some(abbr => lowerDate.includes(abbr.toLowerCase()));
+                                  return isDateInMonth(r.date, exportStudentMonth);
                                 });
 
                                 const isHadir = recs.filter(r => r.status === 'Hadir').length;
@@ -6297,17 +6304,7 @@ export default function App() {
                               const data = filteredStudents.map((student, idx) => {
                                 const recs = studentRecords.filter(r => {
                                   if (r.nis !== student.nis) return false;
-                                  if (exportStudentMonth === 'all') return true;
-                                  
-                                  const [m, y] = exportStudentMonth.split('-');
-                                  const monthsMap: { [key: string]: string[] } = {
-                                    '01': ['Jan'], '02': ['Feb'], '03': ['Mar'], '04': ['Apr'],
-                                    '05': ['Mei', 'May'], '06': ['Jun'], '07': ['Jul'], '08': ['Agu', 'Aug'],
-                                    '09': ['Sep'], '10': ['Okt', 'Oct'], '11': ['Nov'], '12': ['Des', 'Dec']
-                                  };
-                                  const abbrs = monthsMap[m] || [];
-                                  const lowerDate = (r.date || '').toLowerCase();
-                                  return lowerDate.includes(y) && abbrs.some(abbr => lowerDate.includes(abbr.toLowerCase()));
+                                  return isDateInMonth(r.date, exportStudentMonth);
                                 });
 
                                 const isHadir = recs.filter(r => r.status === 'Hadir').length;
