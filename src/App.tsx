@@ -1605,8 +1605,8 @@ export default function App() {
           localStorage.setItem('ruangKelas', 'VII - A');
         }
         if (!mataPelajaran) {
-          setMataPelajaran('PAI');
-          localStorage.setItem('mataPelajaran', 'PAI');
+          setMataPelajaran('BAHASA INDONESIA');
+          localStorage.setItem('mataPelajaran', 'BAHASA INDONESIA');
         }
       }
       setModalState({ show: true, type: btn });
@@ -7505,7 +7505,7 @@ export default function App() {
                             onChange={(e) => setMataPelajaran(e.target.value)}
                             className="w-full bg-white/[0.03] border border-white/5 rounded-2xl pl-4 pr-10 py-3 text-base font-normal text-white focus:outline-none focus:border-amber-500/50 appearance-none cursor-pointer"
                           >
-                            {["PAI", "Matematika", "Bahasa Indonesia", "Bahasa Inggris", "IPA", "IPS", "PJOK", "Seni Budaya", "PPKn"].map((m) => (
+                            {["BAHASA INDONESIA", "MATEMATIKA", "PABP", "BTQ", "IPS", "SENBUD", "PP", "IPA", "BAHASA INGGRIS", "PJOK", "PRAKARYA", "INFORMATIKA"].map((m) => (
                               <option key={m} value={m} className="bg-[#0a0a0f] text-white font-normal">{m}</option>
                             ))}
                           </select>
