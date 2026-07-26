@@ -458,10 +458,13 @@ export default function App() {
 
   // Class Attendance states
   const [selectedClassAttendance, setSelectedClassAttendance] = useState('VII A');
-  const [attendanceDate, setAttendanceDate] = useState('2026-06-27');
+  const [attendanceDate, setAttendanceDate] = useState(() => new Date().toLocaleDateString('en-CA'));
   const [searchAttendanceSiswaQuery, setSearchAttendanceSiswaQuery] = useState('');
   const [selectedSessionFilter, setSelectedSessionFilter] = useState<string>('all');
-  const [personalHistoryMonth, setPersonalHistoryMonth] = useState('06-2026');
+  const [personalHistoryMonth, setPersonalHistoryMonth] = useState(() => {
+    const d = new Date();
+    return `${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+  });
 
   useEffect(() => {
     setSelectedSessionFilter('all');
@@ -520,12 +523,14 @@ export default function App() {
     return registeredInClass.map(student => {
       const record = studentRecords.find(r => {
         const isNisMatch = r.nis === student.nis;
-        const recordDate = r.date || '2026-06-27';
+        const recordDate = r.date || new Date().toLocaleDateString('en-CA');
         const isDateMatch = recordDate === attendanceDate;
         
         const isSessionMatch = selectedSessionFilter === 'all'
-          ? !r.sessionId
-          : r.sessionId === selectedSessionFilter;
+          ? true
+          : selectedSessionFilter === 'harian'
+            ? !r.sessionId
+            : r.sessionId === selectedSessionFilter;
           
         return isNisMatch && isDateMatch && isSessionMatch;
       });
@@ -1341,7 +1346,7 @@ export default function App() {
 
     const existingIndex = studentRecords.findIndex(r => {
       const isNisMatch = r.nis === nis;
-      const rDate = r.date || '2026-06-27';
+      const rDate = r.date || new Date().toLocaleDateString('en-CA');
       const isDateMatch = rDate === targetDate;
       const isSessionMatch = (r.sessionId || '') === (sessionId || '');
       return isNisMatch && isDateMatch && isSessionMatch;
@@ -3307,7 +3312,8 @@ export default function App() {
                         onChange={(e) => setSelectedSessionFilter(e.target.value)}
                         className="w-full sm:w-auto appearance-none bg-[#0A0A0F] border border-white/10 rounded-xl px-4 py-2.5 pr-10 text-white text-sm focus:outline-none focus:border-emerald-500/50 transition-colors"
                       >
-                        <option value="all">Presensi Barcode / Harian</option>
+                        <option value="all">Semua Presensi (Harian & Sesi)</option>
+                        <option value="harian">Presensi Harian / Barcode Sahaja</option>
                         {classSessionsOnDate.map(session => (
                           <option key={session.id} value={session.id}>
                             Sesi: {session.mapel} ({session.name})
@@ -3779,7 +3785,7 @@ export default function App() {
                       <div className="space-y-3 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar">
                         {(() => {
                           const todayStr = new Date().toLocaleDateString('en-CA');
-                          const todayRecords = studentRecords.filter(rec => (rec.date || '2026-06-27') === todayStr);
+                          const todayRecords = studentRecords.filter(rec => (rec.date || todayStr) === todayStr);
                           if (todayRecords.length === 0) {
                             return (
                               <div className="text-center py-10">
@@ -3972,7 +3978,7 @@ export default function App() {
                   {(() => {
                     const todayStr = new Date().toLocaleDateString('en-CA');
                     const todayRecords = studentRecords.filter(rec => 
-                      (rec.date || '2026-06-27') === todayStr && 
+                      (rec.date || todayStr) === todayStr && 
                       (rec.status === 'Hadir' || rec.status === 'Terlambat')
                     );
                     const uniqueNisCount = new Set(todayRecords.map(rec => rec.nis)).size;
