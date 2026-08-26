@@ -350,7 +350,7 @@ export function normalizeDateToYYYYMMDD(dStr: any): string {
       mei: '05', may: '05',
       jun: '06', juni: '06',
       jul: '07', juli: '07',
-      agu: '08', agustus: '08', aug: '08',
+      agu: '08', agustus: '08', aug: '08', agt: '08',
       sep: '09', september: '09',
       okt: '10', oktober: '10', oct: '10',
       nov: '11', november: '11',

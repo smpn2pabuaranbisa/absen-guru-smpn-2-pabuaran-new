@@ -149,7 +149,16 @@ function getDistanceFromLatLonInM(lat1: number, lon1: number, lat2: number, lon2
 }
 
 function getScheduleForDate(dateStr: string | null | undefined, settings: any) {
-  const dateObj = dateStr ? new Date(dateStr) : new Date();
+  let dateObj = new Date();
+  if (dateStr) {
+    const normalized = normalizeDateToYYYYMMDD(dateStr);
+    dateObj = new Date(normalized);
+  }
+  
+  if (isNaN(dateObj.getTime())) {
+    dateObj = new Date(); // fallback
+  }
+
   const dayIndex = dateObj.getDay();
   if (settings.daySchedules && settings.daySchedules[dayIndex]) {
     return {
@@ -618,8 +627,10 @@ export default function App() {
         const totalLimitMinutes = limitHour * 60 + limitMinute + tolerance;
         
         const timeParts = rec.time ? rec.time.split(/[:.]/) : [];
-        const hour = timeParts[0] ? parseInt(timeParts[0]) : 0;
+        let hour = timeParts[0] ? parseInt(timeParts[0]) : 0;
         const minute = timeParts[1] ? parseInt(timeParts[1]) : 0;
+        if (rec.time && rec.time.toLowerCase().includes('pm') && hour < 12) hour += 12;
+        if (rec.time && rec.time.toLowerCase().includes('am') && hour === 12) hour = 0;
         const totalMinutes = hour * 60 + minute;
         
         if (totalMinutes > totalLimitMinutes) {
@@ -725,8 +736,10 @@ export default function App() {
         const totalLimitMinutes = limitHour * 60 + limitMinute + tolerance;
         
         const timeParts = datangRec.time ? datangRec.time.split(/[:.]/) : [];
-        const hour = timeParts[0] ? parseInt(timeParts[0]) : 0;
+        let hour = timeParts[0] ? parseInt(timeParts[0]) : 0;
         const minute = timeParts[1] ? parseInt(timeParts[1]) : 0;
+        if (datangRec.time && datangRec.time.toLowerCase().includes('pm') && hour < 12) hour += 12;
+        if (datangRec.time && datangRec.time.toLowerCase().includes('am') && hour === 12) hour = 0;
         const totalMinutes = hour * 60 + minute;
         
         if (totalMinutes > totalLimitMinutes) {
