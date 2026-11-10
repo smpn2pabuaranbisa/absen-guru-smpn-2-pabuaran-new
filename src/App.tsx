@@ -1652,7 +1652,21 @@ export default function App() {
 
     if (btn.id === 'datang' || btn.id === 'pulang' || btn.id === 'mengajar' || btn.id === 'izin') {
       if (btn.id === 'mengajar') {
-        setJamSelesai('');
+        const now = new Date();
+        const curH = String(now.getHours()).padStart(2, '0');
+        const curM = String(now.getMinutes()).padStart(2, '0');
+        const currentHM = `${curH}:${curM}`;
+        setJamMulai(currentHM);
+        localStorage.setItem('jamMulai', currentHM);
+
+        // Auto default jamSelesai = +40 Menit (1 Jam Pelajaran standar)
+        const endTotalM = now.getHours() * 60 + now.getMinutes() + 40;
+        const endH = String(Math.floor(endTotalM / 60) % 24).padStart(2, '0');
+        const endM = String(endTotalM % 60).padStart(2, '0');
+        const defaultEndHM = `${endH}:${endM}`;
+        setJamSelesai(defaultEndHM);
+        localStorage.setItem('jamSelesai', defaultEndHM);
+
         if (!ruangKelas) {
           setRuangKelas('VII - A');
           localStorage.setItem('ruangKelas', 'VII - A');
@@ -7524,42 +7538,68 @@ export default function App() {
                     {/* Time fields (Jam Mulai / Jam Selesai) Row */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <div className="flex items-center gap-1.5 text-blue-400 font-normal tracking-wider text-[10px] uppercase">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>JAM MULAI</span>
-                        </div>
-                        <div className="relative">
-                          <select 
-                            value={jamMulai} 
-                            onChange={(e) => setJamMulai(e.target.value)}
-                            className="w-full bg-white/[0.03] border border-white/5 rounded-2xl pl-4 pr-10 py-3.5 text-xl font-normal text-white focus:outline-none focus:border-amber-500/50 appearance-none cursor-pointer"
+                        <div className="flex items-center justify-between text-blue-400 font-normal tracking-wider text-[10px] uppercase">
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5" />
+                            JAM MULAI
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const now = new Date();
+                              const cur = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                              setJamMulai(cur);
+                            }}
+                            className="text-[9px] text-blue-400 hover:text-white underline cursor-pointer"
                           >
-                            {["07.00", "07.30", "08.00", "08.30", "08.53", "09.00", "09.30", "10.00", "10.30", "11.00", "11.30", "12.00", "12.30", "13.00", "13.30", "14.00"].map((t) => (
-                              <option key={t} value={t} className="bg-[#0a0a0f] text-white font-normal">{t}</option>
-                            ))}
-                          </select>
-                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                            Set Jam Sekarang
+                          </button>
                         </div>
+                        <input 
+                          type="time" 
+                          value={jamMulai ? jamMulai.replace('.', ':') : ''} 
+                          onChange={(e) => setJamMulai(e.target.value)}
+                          className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-4 py-3 text-lg font-mono text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                        />
                       </div>
 
                       <div className="space-y-1.5">
-                        <div className="flex items-center gap-1.5 text-blue-400 font-normal tracking-wider text-[10px] uppercase">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>JAM SELESAI <span className="text-rose-400">*</span></span>
+                        <div className="flex items-center justify-between text-blue-400 font-normal tracking-wider text-[10px] uppercase">
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5" />
+                            JAM SELESAI <span className="text-rose-400">*</span>
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const [h, m] = (jamMulai ? jamMulai.replace('.', ':') : '07:00').split(':').map(Number);
+                                const tot = (h || 7) * 60 + (m || 0) + 40;
+                                setJamSelesai(`${String(Math.floor(tot / 60) % 24).padStart(2, '0')}:${String(tot % 60).padStart(2, '0')}`);
+                              }}
+                              className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 cursor-pointer"
+                            >
+                              +40m (1 JP)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const [h, m] = (jamMulai ? jamMulai.replace('.', ':') : '07:00').split(':').map(Number);
+                                const tot = (h || 7) * 60 + (m || 0) + 80;
+                                setJamSelesai(`${String(Math.floor(tot / 60) % 24).padStart(2, '0')}:${String(tot % 60).padStart(2, '0')}`);
+                              }}
+                              className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 cursor-pointer"
+                            >
+                              +80m (2 JP)
+                            </button>
+                          </div>
                         </div>
-                        <div className="relative">
-                          <select 
-                            value={jamSelesai} 
-                            onChange={(e) => setJamSelesai(e.target.value)}
-                            className="w-full bg-white/[0.03] border border-white/5 rounded-2xl pl-4 pr-10 py-3.5 text-xl font-normal text-white focus:outline-none focus:border-amber-500/50 appearance-none cursor-pointer"
-                          >
-                            <option value="" className="bg-[#0a0a0f] text-gray-400 font-normal">-- Pilih Jam Selesai --</option>
-                            {["07.30", "08.00", "08.30", "09.00", "09.30", "09.53", "10.00", "10.30", "11.00", "11.30", "12.00", "12.30", "13.00", "13.30", "14.00", "14.30", "15.00"].map((t) => (
-                              <option key={t} value={t} className="bg-[#0a0a0f] text-white font-normal">{t}</option>
-                            ))}
-                          </select>
-                          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-                        </div>
+                        <input 
+                          type="time" 
+                          value={jamSelesai ? jamSelesai.replace('.', ':') : ''} 
+                          onChange={(e) => setJamSelesai(e.target.value)}
+                          className="w-full bg-white/[0.03] border border-white/10 rounded-2xl px-4 py-3 text-lg font-mono text-white focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                        />
                       </div>
                     </div>
 
