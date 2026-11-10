@@ -369,11 +369,11 @@ function formatCellForSheet(val, headerName) {
   }
 
   var lowerHeader = (headerName || "").toLowerCase();
-  var isTextIdField = /^(nip|nis|nohp|phone|barcode|nik|telepon|kunci|nilai|headmasternip|nipguru|nipabsen|nippengganti)/i.test(lowerHeader) || lowerHeader.indexOf("nip") !== -1 || lowerHeader.indexOf("nis") !== -1;
+  var isTextIdField = /^(nip|nis|nohp|phone|barcode|nik|telepon|kunci|nilai|headmasternip|nipguru|nipabsen|nippengganti|waktu|jam|time|tanggal|date)/i.test(lowerHeader) || lowerHeader.indexOf("nip") !== -1 || lowerHeader.indexOf("nis") !== -1 || lowerHeader.indexOf("waktu") !== -1 || lowerHeader.indexOf("jam") !== -1;
   var isLongDigits = /^\d{8,}$/.test(strVal);
 
   if (isTextIdField || isLongDigits) {
-    // Tambahkan tanda petik tunggal (') di awal agar Google Sheets menyimpannya sebagai TEKS murni tanpa notasi ilmiah
+    // Tambahkan tanda petik tunggal (') di awal agar Google Sheets menyimpannya sebagai TEKS murni tanpa diubah format otomatis oleh Sheets
     return "'" + strVal;
   }
 

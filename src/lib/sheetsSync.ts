@@ -102,8 +102,9 @@ export function cleanNipOrNis(val: any): string {
 }
 
 /**
- * Membersihkan dan memformat string Jam (misal "07:00", "15:00")
- * Mencegah kesalahan format akibat konversi ISO Date (seperti "1899-12-29T23:52:48.000Z" atau "1899-12-30T07:52:48.000Z")
+ * Membersihkan dan memformat string Jam (misal "07:00", "06.57.07", "15:00")
+ * Mencegah kesalahan format akibat konversi ISO Date atau tanggal serial Google Sheets
+ * (seperti "2019-06-07 00:00:00", "1899-12-29T23:52:48.000Z", "06.57.07")
  */
 export function cleanTimeString(val: any): string {
   if (val === undefined || val === null) return '';
@@ -113,7 +114,7 @@ export function cleanTimeString(val: any): string {
   // Buang petik tunggal jika ada di awal
   str = str.replace(/^'/, '');
 
-  // Jika sudah berformat HH:mm atau H:mm atau HH:mm:ss
+  // 1. Jika sudah berformat HH:mm atau H:mm atau HH:mm:ss dengan titik dua
   if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(str)) {
     const parts = str.split(':');
     const h = parts[0].padStart(2, '0');
@@ -121,7 +122,15 @@ export function cleanTimeString(val: any): string {
     return `${h}:${m}`;
   }
 
-  // Jika berupa string ISO date (seperti "1899-12-29T23:52:48.000Z" atau "1899-12-30T07:52:48.000Z" atau ISO timestamp)
+  // 2. Format HH.mm atau HH.mm.ss dengan tanda titik (khas toLocaleTimeString id-ID)
+  if (/^\d{1,2}\.\d{2}(\.\d{2})?$/.test(str)) {
+    const parts = str.split('.');
+    const h = parts[0].padStart(2, '0');
+    const m = parts[1].padStart(2, '0');
+    return `${h}:${m}`;
+  }
+
+  // 3. String ISO Date seperti "1899-12-29T23:52:48.000Z" atau "1899-12-30T07:52:48.000Z"
   if (str.includes('T') || str.includes('1899') || str.includes('1900') || str.includes('Z')) {
     try {
       const d = new Date(str);
@@ -145,6 +154,62 @@ export function cleanTimeString(val: any): string {
     } catch (e) {
       // Fallback
     }
+  }
+
+  // 4. Format tanggal dengan jam nyata, misal "2026-11-03 06:57:07" atau "2026-11-03 13.56.41"
+  const dtMatch = str.match(/\d{4}-\d{2}-\d{2}[ T](\d{1,2})[:.](\d{2})([:.]\d{2})?/);
+  if (dtMatch && (dtMatch[1] !== '00' || dtMatch[2] !== '00')) {
+    const h = dtMatch[1].padStart(2, '0');
+    const m = dtMatch[2].padStart(2, '0');
+    return `${h}:${m}`;
+  }
+
+  // 5. Kasus Google Sheets menganggap jam (misal 06:07 atau 12:07) sebagai serial tanggal dengan jam 00:00:00
+  // Contoh di lapangan: "2019-06-07 00:00:00", "1937-12-07 00:00:00", "1935-07-07 00:00:00"
+  const dateZeroMatch = str.match(/^\d{4}-(\d{2})-(\d{2})[ T]00:00(:00)?$/);
+  if (dateZeroMatch) {
+    const p1 = parseInt(dateZeroMatch[1], 10);
+    const p2 = parseInt(dateZeroMatch[2], 10);
+    // Jam kerja/sekolah wajar biasanya antara 05:00 - 18:00
+    if (p1 >= 5 && p1 <= 18) {
+      return `${String(p1).padStart(2, '0')}:${String(p2).padStart(2, '0')}`;
+    }
+    if (p2 >= 5 && p2 <= 18) {
+      return `${String(p2).padStart(2, '0')}:${String(p1).padStart(2, '0')}`;
+    }
+    return `${String(p1).padStart(2, '0')}:${String(p2).padStart(2, '0')}`;
+  }
+
+  return str;
+}
+
+/**
+ * Membersihkan format tanggal (menghilangkan jam 00:00:00 dari Google Sheets)
+ * Contoh: "2026-11-02 00:00:00" -> "02 Nov 2026" atau "2026-11-02"
+ */
+export function cleanDateString(val: any): string {
+  if (val === undefined || val === null) return '';
+  let str = String(val).trim();
+  if (!str) return '';
+
+  // Lepaskan petik tunggal jika ada
+  str = str.replace(/^'/, '');
+
+  if (str.includes(' ') && /^\d{4}-\d{2}-\d{2}/.test(str)) {
+    str = str.split(' ')[0];
+  }
+  if (str.includes('T')) {
+    str = str.split('T')[0];
+  }
+
+  // Jika formatnya YYYY-MM-DD, ubah ke format tanggal standar yang indah "02 Nov 2026"
+  const ymdMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (ymdMatch) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const y = ymdMatch[1];
+    const m = parseInt(ymdMatch[2], 10);
+    const d = ymdMatch[3];
+    return `${d} ${months[m - 1] || ymdMatch[2]} ${y}`;
   }
 
   return str;
@@ -503,7 +568,7 @@ export function fromIndonesianRecord(colName: string, item: any): any {
       return {
         id: String(item.id || ''),
         type: item.tipe || item.type || '',
-        date: item.tanggal || item.date || '',
+        date: cleanDateString(item.tanggal || item.date || ''),
         time: cleanTimeString(item.waktu || item.time || ''),
         nip: cleanNipOrNis(item.nip),
         nama: item.nama || item.name || '',

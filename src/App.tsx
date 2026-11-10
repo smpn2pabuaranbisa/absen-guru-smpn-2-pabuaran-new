@@ -173,6 +173,40 @@ function getScheduleForDate(dateStr: string | null | undefined, settings: any) {
   };
 }
 
+// Menghitung jumlah hari kerja efektif sekolah (Senin - Sabtu) dalam bulan tertentu dikurangi hari libur
+function getWorkingDaysInMonth(monthYearStr: string, holidays: { date: string; name?: string }[] = []): number {
+  if (!monthYearStr || monthYearStr === 'all') return 26;
+  const [mStr, yStr] = monthYearStr.split('-');
+  const month = parseInt(mStr, 10) - 1;
+  const year = parseInt(yStr, 10);
+  if (isNaN(month) || isNaN(year)) return 26;
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const holidayDateSet = new Set(
+    holidays.map(h => {
+      if (!h.date) return '';
+      return normalizeDateToYYYYMMDD(h.date);
+    }).filter(Boolean)
+  );
+
+  let workDays = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const cur = new Date(year, month, d);
+    const dayOfWeek = cur.getDay(); // 0 = Minggu
+    const yyyy = year;
+    const mm = String(month + 1).padStart(2, '0');
+    const dd = String(d).padStart(2, '0');
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+
+    // Senin (1) sampai Sabtu (6) adalah hari kerja aktif sekolah SMPN 2 Pabuaran
+    if (dayOfWeek !== 0 && !holidayDateSet.has(dateStr)) {
+      workDays++;
+    }
+  }
+
+  return workDays > 0 ? workDays : 26;
+}
+
 export default function App() {
   const [userRole, setUserRole] = useState<'guest' | 'guru' | 'siswa' | 'admin'>('guest');
   const [username, setUsername] = useState('');
@@ -673,9 +707,9 @@ export default function App() {
 
   const uniqueAttendanceDaysCount = useMemo(() => {
     const presentRecords = filteredTeacherAttendanceHistory.filter(h => 
-      h.type === 'Absen Datang' || h.type === 'Absen Pulang' || h.type === 'Dinas'
+      h.type === 'Absen Datang' || h.type === 'Absen Pulang' || h.type === 'Dinas' || (h.type && h.type.startsWith('Mengajar'))
     );
-    const uniqueDates = new Set(presentRecords.map(h => h.date));
+    const uniqueDates = new Set(presentRecords.map(h => normalizeDateToYYYYMMDD(h.date) || h.date));
     return uniqueDates.size;
   }, [filteredTeacherAttendanceHistory]);
 
@@ -6101,23 +6135,41 @@ export default function App() {
                               doc.text(`Periode: ${getMonthLabel(exportTeacherMonth)}`, 14, 30);
                               doc.text(`Dicetak pada: ${new Date().toLocaleDateString('id-ID')}`, 14, 36);
                               
+                              const totalDays = getWorkingDaysInMonth(exportTeacherMonth, holidays);
                               const tableData = teachers.map((teacher, idx) => {
                                 const teacherRecords = records.filter(r => {
                                   if (r.nip !== teacher.nip) return false;
                                   return isDateInMonth(r.date, exportTeacherMonth);
                                 });
 
-                                const totalDays = 20;
-                                const sakit = teacherRecords.filter(r => r.type === 'Sakit').length;
-                                const izin = teacherRecords.filter(r => r.type === 'Izin' || r.type === 'Dinas').length;
-                                const hadir = teacherRecords.filter(r => r.type === 'Absen Datang' || r.type === 'Absen Pulang').length;
+                                // Hitung tanggal unik kehadiran guru (Absen Datang / Absen Pulang / Mengajar terhitung 1 hari hadir)
+                                const uniquePresentDates = new Set<string>();
+                                const uniqueSakitDates = new Set<string>();
+                                const uniqueIzinDates = new Set<string>();
+
+                                teacherRecords.forEach(r => {
+                                  const dateKey = normalizeDateToYYYYMMDD(r.date) || r.date;
+                                  if (r.type === 'Sakit') {
+                                    uniqueSakitDates.add(dateKey);
+                                  } else if (r.type === 'Izin' || r.type === 'Dinas' || (r.type && r.type.startsWith('Pengajuan'))) {
+                                    uniqueIzinDates.add(dateKey);
+                                  } else if (r.type === 'Absen Datang' || r.type === 'Absen Pulang' || (r.type && r.type.startsWith('Mengajar'))) {
+                                    uniquePresentDates.add(dateKey);
+                                  }
+                                });
+
+                                const hadir = uniquePresentDates.size;
+                                const sakit = uniqueSakitDates.size;
+                                const izin = uniqueIzinDates.size;
                                 const alpa = Math.max(0, totalDays - hadir - sakit - izin);
-                                const pct = totalDays > 0 ? Math.round(((hadir + sakit + izin) / totalDays) * 100) : 100;
+                                const rawPct = totalDays > 0 ? Math.round(((hadir + sakit + izin) / totalDays) * 100) : 100;
+                                const pct = Math.min(100, Math.max(0, rawPct));
+
                                 return [
                                   (idx + 1).toString(),
                                   teacher.name,
                                   teacher.nip,
-                                  `${pct}%`,
+                                  hadir.toString(),
                                   izin.toString(),
                                   sakit.toString(),
                                   alpa.toString()
@@ -6126,7 +6178,7 @@ export default function App() {
 
                               autoTable(doc, {
                                 startY: 45,
-                                head: [['No', 'Nama Guru', 'NIP', 'Kehadiran (%)', 'Izin', 'Sakit', 'Alpa']],
+                                head: [['No', 'Nama Guru', 'NIP', 'Hadir (Hari)', 'Izin', 'Sakit', 'Alpa']],
                                 body: tableData,
                                 theme: 'grid',
                                 headStyles: { fillColor: [168, 85, 247] },
@@ -6148,24 +6200,40 @@ export default function App() {
                           </button>
                           <button 
                             onClick={() => {
-                              const headers = ['No', 'Nama Guru', 'NIP', 'Kehadiran (%)', 'Izin', 'Sakit', 'Alpa'];
+                              const headers = ['No', 'Nama Guru', 'NIP', 'Hadir (Hari)', 'Izin', 'Sakit', 'Alpa'];
+                              const totalDays = getWorkingDaysInMonth(exportTeacherMonth, holidays);
                               const data = teachers.map((teacher, idx) => {
                                 const teacherRecords = records.filter(r => {
                                   if (r.nip !== teacher.nip) return false;
                                   return isDateInMonth(r.date, exportTeacherMonth);
                                 });
 
-                                const totalDays = 20;
-                                const sakit = teacherRecords.filter(r => r.type === 'Sakit').length;
-                                const izin = teacherRecords.filter(r => r.type === 'Izin' || r.type === 'Dinas').length;
-                                const hadir = teacherRecords.filter(r => r.type === 'Absen Datang' || r.type === 'Absen Pulang').length;
+                                // Hitung tanggal unik kehadiran guru (Absen Datang / Absen Pulang / Mengajar terhitung 1 hari hadir)
+                                const uniquePresentDates = new Set<string>();
+                                const uniqueSakitDates = new Set<string>();
+                                const uniqueIzinDates = new Set<string>();
+
+                                teacherRecords.forEach(r => {
+                                  const dateKey = normalizeDateToYYYYMMDD(r.date) || r.date;
+                                  if (r.type === 'Sakit') {
+                                    uniqueSakitDates.add(dateKey);
+                                  } else if (r.type === 'Izin' || r.type === 'Dinas' || (r.type && r.type.startsWith('Pengajuan'))) {
+                                    uniqueIzinDates.add(dateKey);
+                                  } else if (r.type === 'Absen Datang' || r.type === 'Absen Pulang' || (r.type && r.type.startsWith('Mengajar'))) {
+                                    uniquePresentDates.add(dateKey);
+                                  }
+                                });
+
+                                const hadir = uniquePresentDates.size;
+                                const sakit = uniqueSakitDates.size;
+                                const izin = uniqueIzinDates.size;
                                 const alpa = Math.max(0, totalDays - hadir - sakit - izin);
-                                const pct = totalDays > 0 ? Math.round(((hadir + sakit + izin) / totalDays) * 100) : 100;
+
                                 return [
                                   (idx + 1).toString(),
                                   teacher.name,
                                   teacher.nip,
-                                  `${pct}%`,
+                                  hadir.toString(),
                                   izin.toString(),
                                   sakit.toString(),
                                   alpa.toString()
