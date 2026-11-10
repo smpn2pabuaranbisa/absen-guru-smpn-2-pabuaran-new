@@ -6161,9 +6161,6 @@ export default function App() {
                                 const hadir = uniquePresentDates.size;
                                 const sakit = uniqueSakitDates.size;
                                 const izin = uniqueIzinDates.size;
-                                const alpa = Math.max(0, totalDays - hadir - sakit - izin);
-                                const rawPct = totalDays > 0 ? Math.round(((hadir + sakit + izin) / totalDays) * 100) : 100;
-                                const pct = Math.min(100, Math.max(0, rawPct));
 
                                 return [
                                   (idx + 1).toString(),
@@ -6171,14 +6168,13 @@ export default function App() {
                                   teacher.nip,
                                   hadir.toString(),
                                   izin.toString(),
-                                  sakit.toString(),
-                                  alpa.toString()
+                                  sakit.toString()
                                 ];
                               });
 
                               autoTable(doc, {
                                 startY: 45,
-                                head: [['No', 'Nama Guru', 'NIP', 'Hadir (Hari)', 'Izin', 'Sakit', 'Alpa']],
+                                head: [['No', 'Nama Guru', 'NIP', 'Hadir (Hari)', 'Izin / Dinas', 'Sakit']],
                                 body: tableData,
                                 theme: 'grid',
                                 headStyles: { fillColor: [168, 85, 247] },
@@ -6200,7 +6196,7 @@ export default function App() {
                           </button>
                           <button 
                             onClick={() => {
-                              const headers = ['No', 'Nama Guru', 'NIP', 'Hadir (Hari)', 'Izin', 'Sakit', 'Alpa'];
+                              const headers = ['No', 'Nama Guru', 'NIP', 'Hadir (Hari)', 'Izin / Dinas', 'Sakit'];
                               const totalDays = getWorkingDaysInMonth(exportTeacherMonth, holidays);
                               const data = teachers.map((teacher, idx) => {
                                 const teacherRecords = records.filter(r => {
@@ -6227,7 +6223,6 @@ export default function App() {
                                 const hadir = uniquePresentDates.size;
                                 const sakit = uniqueSakitDates.size;
                                 const izin = uniqueIzinDates.size;
-                                const alpa = Math.max(0, totalDays - hadir - sakit - izin);
 
                                 return [
                                   (idx + 1).toString(),
@@ -6235,8 +6230,7 @@ export default function App() {
                                   teacher.nip,
                                   hadir.toString(),
                                   izin.toString(),
-                                  sakit.toString(),
-                                  alpa.toString()
+                                  sakit.toString()
                                 ];
                               });
                               const csvContent = [
